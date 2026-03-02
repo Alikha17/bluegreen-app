@@ -1,32 +1,40 @@
 name: Build and Push Docker to ECR
+
 on:
   push:
-    branches: [main]
+    branches: [ main ]
+
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Configure AWS credentials
+      - name: Configure AWS Credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: arn:aws:iam::238991998648:role/github-ecr-role
           aws-region: ap-south-1
 
       - name: Login to ECR
         run: |
           aws ecr get-login-password --region ap-south-1 | \
-          docker login --username AWS --password-stdin <AWS_ACCOUNT_ID>.dkr.ecr.ap-south-1.amazonaws.com
+          docker login --username AWS --password-stdin 238991998648.dkr.ecr.ap-south-1.amazonaws.com
 
-      - name: Build Docker image
-        run: docker build -t bluegreen-app:$GITHUB_SHA .
+      - name: Build Image
+        run: docker build -t bluegreen-app:${{ github.sha }} .
 
-      - name: Tag image
-        run: docker tag bluegreen-app:$GITHUB_SHA <AWS_ACCOUNT_ID>.dkr.ecr.ap-south-1.amazonaws.com/bluegreen-app:$GITHUB_SHA
+      - name: Tag Image
+        run: |
+          docker tag bluegreen-app:${{ github.sha }} \
+          238991998648.dkr.ecr.ap-south-1.amazonaws.com/bluegreen-app:${{ github.sha }}
 
-      - name: Push image to ECR
-        run: docker push <AWS_ACCOUNT_ID>.dkr.ecr.ap-south-1.amazonaws.com/bluegreen-app:$GITHUB_SHA
+      - name: Push Image
+        run: |
+          docker push 238991998648.dkr.ecr.ap-south-1.amazonaws.com/bluegreen-app:${{ github.sha }}
