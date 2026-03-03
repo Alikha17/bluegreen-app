@@ -1,40 +1,30 @@
-name: Build and Push Docker to ECR
+name: Build and Push
 
 on:
-  push:
-    branches: [ main ]
-
-permissions:
-  id-token: write
-  contents: read
+  workflow_dispatch:
+    inputs:
+      color:
+        description: "Deployment Color"
+        required: true
+        type: choice
+        options:
+          - blue
+          - green
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Configure AWS Credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: arn:aws:iam::238991998648:role/github-ecr-role
-          aws-region: ap-south-1
+      - uses: actions/checkout@v3
 
       - name: Login to ECR
-        run: |
-          aws ecr get-login-password --region ap-south-1 | \
-          docker login --username AWS --password-stdin 238991998648.dkr.ecr.ap-south-1.amazonaws.com
+        uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Build Image
-        run: docker build -t bluegreen-app:${{ github.sha }} .
-
-      - name: Tag Image
+      - name: Build and Push
         run: |
-          docker tag bluegreen-app:${{ github.sha }} \
-          238991998648.dkr.ecr.ap-south-1.amazonaws.com/bluegreen-app:${{ github.sha }}
+          IMAGE=238991998648.dkr.ecr.ap-south-1.amazonaws.com/bluegreen-app
+          COLOR=${{ github.event.inputs.color }}
 
-      - name: Push Image
-        run: |
-          docker push 238991998648.dkr.ecr.ap-south-1.amazonaws.com/bluegreen-app:${{ github.sha }}
+          docker build --build-arg COLOR=$COLOR -t $IMAGE:$COLOR .
+          docker push $IMAGE:$COLOR
