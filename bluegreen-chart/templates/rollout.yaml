@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: bluegreen-app
+spec:
+  replicas: 2
+
+  strategy:
+    blueGreen:
+      activeService: blue-service
+      previewService: green-service
+      autoPromotionEnabled: true
+
+  selector:
+    matchLabels:
+      app: bluegreen
+
+  template:
+    metadata:
+      labels:
+        app: bluegreen
+    spec:
+      containers:
+      - name: app
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        ports:
+        - containerPort: 3000
